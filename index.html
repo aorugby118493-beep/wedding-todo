@@ -606,12 +606,28 @@ const firebaseConfig = {
 
 // ====== デフォルトタスク ======
 const DEFAULT_TASKS = [
+  // 🔴 3月中に完了
   { id: 'task-1', title: '引出物の決定', desc: '「引出物セッティング指示書」に入力してLINEで提出', priority: 'urgent', done: false, custom: false },
   { id: 'task-2', title: '席次表 最新版の共有', desc: '最新の席次表をプランナーへ共有', priority: 'urgent', done: false, custom: false },
   { id: 'task-3', title: '列席支度申込書の提出', desc: 'Excelファイルに入力してLINEで寺島さんへ送付', priority: 'urgent', done: false, custom: false },
+  { id: 'task-7', title: '招待状の作成・承認依頼', desc: '親族用・友達用・乾杯用の3種類を作成してプランナーへ承認依頼（3/15中）', priority: 'urgent', done: false, custom: false },
+  { id: 'task-8', title: '青木両親の着付け・ヘアメイク確認', desc: '列席支度表データをもらう。ヘアセット・メイクもするか確認', priority: 'urgent', done: false, custom: false },
+  { id: 'task-9', title: 'ヘアメイクリハーサル候補日送付', desc: '咲菜ちゃんのリハーサル候補日を寺島さんへ送る（近日中）', priority: 'urgent', done: false, custom: false },
+  // 🟡 1ヶ月前まで（5月末）
   { id: 'task-4', title: 'くじ抽選会の景品決定', desc: 'RWEDDINGSで手配する場合は1ヶ月前（5月27日頃）まで', priority: 'soon', done: false, custom: false },
   { id: 'task-5', title: 'エンドロール音源の決定', desc: '1ヶ月前まで。ISUM申請曲サイトで確認: isum.or.jp/music/', priority: 'soon', done: false, custom: false },
-  { id: 'task-6', title: 'ペーパーアイテム類の検討', desc: '席次表・メニュー表・席札のデザイン・印刷方法を検討', priority: 'ongoing', done: false, custom: false }
+  { id: 'task-10', title: '席次表 CANVAで自作', desc: 'CANVAで作成してプランナーに確認してもらう（1ヶ月前まで）', priority: 'soon', done: false, custom: false },
+  { id: 'task-11', title: '席札・料理メニュー・プロフィールブック 自作', desc: 'すべて自作。まとめて1冊にしてもOK（1ヶ月前まで）', priority: 'soon', done: false, custom: false },
+  { id: 'task-12', title: 'ギフトセッティング表の作成', desc: '送り分けは5パターンまで：①新郎友人 ②新婦友人 ③新郎親族 ④新婦親族', priority: 'soon', done: false, custom: false },
+  { id: 'task-13', title: '当日BGMリスト作成・CD原版用意', desc: 'リストデータをもらってから入力。CD原版も準備', priority: 'soon', done: false, custom: false },
+  // 🟢 随時
+  { id: 'task-6', title: 'ペーパーアイテム類の検討', desc: '席次表・メニュー表・席札のデザイン・印刷方法を検討', priority: 'ongoing', done: false, custom: false },
+  { id: 'task-14', title: 'ウェルカムスペースの準備', desc: 'ソダシを置く予定', priority: 'ongoing', done: false, custom: false },
+  { id: 'task-15', title: 'スイッチングレター（手紙）', desc: '参列者みんなへの手紙を書く（まだ先でOK）', priority: 'ongoing', done: false, custom: false },
+  { id: 'task-16', title: '廊下・受付に置くものを検討', desc: '作ったらLINEで寺島さんへ送る', priority: 'ongoing', done: false, custom: false },
+  { id: 'task-17', title: 'ファミリーミート用 両親への手紙', desc: '式中に両親へ手紙を読む（作成は後回しでOK）', priority: 'ongoing', done: false, custom: false },
+  { id: 'task-18', title: '式当日カメラマンの選定', desc: 'インスタで好みを探して指名（指名料あり）', priority: 'ongoing', done: false, custom: false },
+  { id: 'task-19', title: '前撮りの準備', desc: '康太：足袋・肌襦袢・礼服・カフスシャツ（要購入）、タキシードも持参。咲菜ちゃん：肌襦袢は実家から', priority: 'ongoing', done: false, custom: false }
 ];
 
 let tasks = [];
