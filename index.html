@@ -225,7 +225,7 @@
       line-height: 1.4;
     }
     .task-card.done .task-title { text-decoration: line-through; color: var(--done-text); }
-    .task-desc { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.5; }
+    .task-desc { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.5; white-space: pre-wrap; }
     .task-card.done .task-desc { color: #ccc; }
     .task-meta {
       display: flex;
@@ -616,7 +616,7 @@ const DEFAULT_TASKS = [
   // 🟡 1ヶ月前まで（5月末）
   { id: 'task-4', title: 'くじ抽選会の景品決定', desc: 'RWEDDINGSで手配する場合は1ヶ月前（5月27日頃）まで', priority: 'soon', done: false, custom: false },
   { id: 'task-5', title: 'エンドロール音源の決定', desc: '1ヶ月前まで。ISUM申請曲サイトで確認: isum.or.jp/music/', priority: 'soon', done: false, custom: false },
-  { id: 'task-10', title: '席次表 CANVAで自作', desc: 'CANVAで作成してプランナーに確認してもらう（1ヶ月前まで）', priority: 'soon', done: false, custom: false },
+  { id: 'task-10', title: '席次表 CANVAで自作', desc: 'CANVAで作成してプランナーに確認してもらう（1ヶ月前まで）\n📌 配置ルール：①基本的に椅子は動かさない ②親族を外側・内側に友人（○○家でまとめなくてOK） ③前の4名卓×2は除ける→前の大きい席を下げる', priority: 'soon', done: false, custom: false },
   { id: 'task-11', title: '席札・料理メニュー・プロフィールブック 自作', desc: 'すべて自作。まとめて1冊にしてもOK（1ヶ月前まで）', priority: 'soon', done: false, custom: false },
   { id: 'task-12', title: 'ギフトセッティング表の作成', desc: '送り分けは5パターンまで：①新郎友人 ②新婦友人 ③新郎親族 ④新婦親族', priority: 'soon', done: false, custom: false },
   { id: 'task-13', title: '当日BGMリスト作成・CD原版用意', desc: 'リストデータをもらってから入力。CD原版も準備', priority: 'soon', done: false, custom: false },
