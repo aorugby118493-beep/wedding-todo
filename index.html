@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💍 結婚式 TODO</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink: #f8a4b8;
+      --pink-light: #fde8ee;
+      --pink-dark: #e07a94;
+      --text: #333;
+      --done-text: #aaa;
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+      background: #f5f0ed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ====== パスワード画面 ====== */
+    #lock-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(160deg, #fde8ee 0%, #f5f0ed 60%, #fde8ee 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 32px;
+    }
+    #lock-screen.hidden { display: none; }
+    .lock-icon { font-size: 64px; margin-bottom: 16px; }
+    .lock-title { font-size: 22px; font-weight: 700; color: var(--pink-dark); margin-bottom: 6px; }
+    .lock-sub { font-size: 13px; color: #999; margin-bottom: 28px; }
+    .lock-input {
+      width: 100%;
+      max-width: 280px;
+      padding: 14px 18px;
+      border: 2.5px solid var(--pink);
+      border-radius: 16px;
+      font-size: 18px;
+      text-align: center;
+      letter-spacing: 4px;
+      outline: none;
+      background: white;
+      margin-bottom: 14px;
+    }
+    .lock-input:focus { border-color: var(--pink-dark); }
+    .lock-btn {
+      width: 100%;
+      max-width: 280px;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--pink), var(--pink-dark));
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .lock-error {
+      color: var(--red);
+      font-size: 13px;
+      margin-top: 10px;
+      min-height: 18px;
+    }
+
+    /* ====== ヘッダー ====== */
+    header {
+      background: linear-gradient(135deg, #f8a4b8, #e07a94);
+      color: white;
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(224,122,148,0.3);
+    }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+    .header-sub {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .countdown {
+      background: rgba(255,255,255,0.25);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .sync-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+      transition: background 0.3s;
+    }
+    .sync-dot.online { background: #4caf50; }
+    .sync-dot.syncing { background: #ff9800; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ====== タブ ====== */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid var(--pink-light);
+      position: sticky;
+      top: 72px;
+      z-index: 99;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 4px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: var(--pink-dark);
+      border-bottom-color: var(--pink-dark);
+    }
+
+    /* ====== メイン ====== */
+    main {
+      flex: 1;
+      padding: 12px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ====== セクション ====== */
+    .section { margin-bottom: 20px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #666;
+      letter-spacing: 0.5px;
+    }
+    .badge {
+      background: var(--pink);
+      color: white;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge.urgent { background: var(--red); }
+    .badge.soon { background: var(--orange); }
+    .badge.ok { background: var(--green); }
+
+    /* ====== タスクカード ====== */
+    .task-card {
+      background: white;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+      transition: all 0.3s;
+    }
+    .task-card:active { transform: scale(0.98); }
+    .task-card.done { opacity: 0.55; background: #fafafa; }
+    .task-card.urgent { border-left-color: var(--red); }
+    .task-card.soon { border-left-color: var(--orange); }
+    .task-card.ok { border-left-color: var(--green); }
+
+    .check-circle {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2.5px solid #ddd;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-top: 1px;
+    }
+    .task-card.done .check-circle {
+      background: var(--green);
+      border-color: var(--green);
+    }
+    .check-circle::after {
+      content: '';
+      display: none;
+      width: 6px; height: 10px;
+      border: 2.5px solid white;
+      border-top: none; border-left: none;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+    .task-card.done .check-circle::after { display: block; }
+
+    .task-content { flex: 1; min-width: 0; }
+    .task-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .task-card.done .task-title { text-decoration: line-through; color: var(--done-text); }
+    .task-desc { font-size: 12px; color: #888; margin-top: 4px; line-height: 1.5; }
+    .task-card.done .task-desc { color: #ccc; }
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+    .tag.deadline-urgent { background: #fde8e8; color: var(--red); }
+    .tag.deadline-soon { background: #fff3e0; color: var(--orange); }
+    .tag.deadline-ok { background: #e8f5e9; color: var(--green); }
+    .tag.type { background: var(--pink-light); color: var(--pink-dark); }
+
+    /* ====== スケジュール（チャット風） ====== */
+    .date-divider {
+      text-align: center;
+      margin: 16px 0 10px;
+      position: relative;
+    }
+    .date-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; right: 0;
+      height: 1px;
+      background: #e0d8d4;
+    }
+    .date-divider span {
+      position: relative;
+      background: #f5f0ed;
+      padding: 0 10px;
+      font-size: 12px;
+      color: #999;
+      font-weight: 600;
+    }
+    .chat-bubble { max-width: 88%; margin-bottom: 10px; }
+    .chat-bubble.planner { margin-right: auto; }
+    .chat-bubble.us { margin-left: auto; text-align: right; }
+    .bubble-label { font-size: 11px; color: #999; margin-bottom: 3px; padding: 0 4px; }
+    .bubble-body {
+      background: white;
+      border-radius: 18px;
+      padding: 12px 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+      text-align: left;
+    }
+    .chat-bubble.planner .bubble-body { border-top-left-radius: 4px; }
+    .chat-bubble.us .bubble-body { background: var(--pink-light); border-top-right-radius: 4px; }
+    .bubble-time { font-size: 11px; color: #bbb; padding: 2px 6px; }
+    .schedule-item { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0; }
+    .schedule-icon { font-size: 16px; flex-shrink: 0; }
+    .schedule-text { font-size: 13px; }
+    .schedule-date { font-weight: 700; color: var(--pink-dark); }
+
+    /* ====== 進捗 ====== */
+    .progress-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .progress-title { font-size: 13px; font-weight: 700; color: #666; margin-bottom: 10px; }
+    .progress-bar-wrap {
+      background: #f0f0f0;
+      border-radius: 10px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--pink), var(--pink-dark));
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+    .progress-label { font-size: 12px; color: #999; text-align: right; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ====== FAB ====== */
+    .fab {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--pink), var(--pink-dark));
+      color: white;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(224,122,148,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: transform 0.2s;
+    }
+    .fab:active { transform: scale(0.9); }
+
+    /* ====== モーダル ====== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 20px;
+      width: 100%;
+      max-height: 70vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .modal input, .modal textarea, .modal select {
+      width: 100%;
+      border: 2px solid #eee;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      margin-bottom: 10px;
+      outline: none;
+      font-family: inherit;
+    }
+    .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--pink); }
+    .modal textarea { height: 80px; resize: none; }
+    .modal-buttons { display: flex; gap: 10px; margin-top: 6px; }
+    .btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: white; }
+    .btn-secondary { background: #f0f0f0; color: #666; }
+
+    /* ====== ローディング ====== */
+    .loading-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--pink), var(--pink-dark));
+      z-index: 9998;
+      transition: width 0.3s;
+      width: 0%;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ローディングバー -->
+<div class="loading-bar" id="loading-bar"></div>
+
+<!-- パスワード画面 -->
+<div id="lock-screen">
+  <div class="lock-icon">💍</div>
+  <div class="lock-title">結婚式 TODO</div>
+  <div class="lock-sub">青木家専用アプリ</div>
+  <input type="password" class="lock-input" id="pw-input" placeholder="パスワード"
+    autocomplete="off" inputmode="numeric">
+  <button class="lock-btn" onclick="checkPassword()">ログイン</button>
+  <div class="lock-error" id="pw-error"></div>
+</div>
+
+<!-- アプリ本体 -->
+<header>
+  <h1>💍 結婚式 TODO</h1>
+  <div class="header-sub">
+    <span class="countdown" id="countdown">読み込み中...</span>
+    <span style="font-size:12px; opacity:0.9;">青木康太 & 清水咲菜</span>
+    <span class="sync-dot" id="sync-dot" title="同期状態"></span>
+  </div>
+  <p style="font-size:11px; margin-top:4px; opacity:0.8;">2026年6月27日（土）@ /recipe</p>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('tasks')">📋 タスク</div>
+  <div class="tab" onclick="switchTab('schedule')">📅 スケジュール</div>
+  <div class="tab" onclick="switchTab('progress')">✨ 進捗</div>
+</div>
+
+<main>
+
+  <!-- タスクタブ -->
+  <div id="tab-tasks" class="tab-content active">
+    <div id="urgent-section" class="section">
+      <div class="section-header">
+        <span class="section-title">🔴 3月中に完了</span>
+        <span class="badge urgent" id="urgent-count">3</span>
+      </div>
+      <div id="urgent-tasks"></div>
+    </div>
+    <div id="soon-section" class="section">
+      <div class="section-header">
+        <span class="section-title">🟡 1ヶ月前まで（5月末）</span>
+        <span class="badge soon" id="soon-count">2</span>
+      </div>
+      <div id="soon-tasks"></div>
+    </div>
+    <div id="ongoing-section" class="section">
+      <div class="section-header">
+        <span class="section-title">🟢 随時検討中</span>
+        <span class="badge ok" id="ongoing-count">1</span>
+      </div>
+      <div id="ongoing-tasks"></div>
+    </div>
+    <div id="custom-section" class="section" style="display:none">
+      <div class="section-header">
+        <span class="section-title">📌 追加タスク</span>
+        <span class="badge" id="custom-count">0</span>
+      </div>
+      <div id="custom-tasks"></div>
+    </div>
+  </div>
+
+  <!-- スケジュールタブ -->
+  <div id="tab-schedule" class="tab-content">
+    <div class="date-divider"><span>3月29日（日）</span></div>
+    <div class="chat-bubble planner">
+      <div class="bubble-label">🌸 RWEDDINGS 寺島さん</div>
+      <div class="bubble-body">
+        <div class="schedule-item">
+          <span class="schedule-icon">💐</span>
+          <div class="schedule-text"><span class="schedule-date">10:00〜</span> お花打合せ<br><small style="color:#888">アイテムフェア / RWEDDINGSサロン</small></div>
+        </div>
+        <div class="schedule-item">
+          <span class="schedule-icon">📸</span>
+          <div class="schedule-text"><span class="schedule-date">12:30〜</span> カメラ打合せ<br><small style="color:#888">終了予定 13:45頃</small></div>
+        </div>
+      </div>
+      <div class="bubble-time">3月14日</div>
+    </div>
+
+    <div class="date-divider"><span>4月4日（日）</span></div>
+    <div class="chat-bubble planner">
+      <div class="bubble-label">🌸 RWEDDINGS 寺島さん</div>
+      <div class="bubble-body">
+        <div class="schedule-item">
+          <span class="schedule-icon">🍽️</span>
+          <div class="schedule-text"><span class="schedule-date">17:30〜</span> ご試食<br><small style="color:#888">レシピ 現地集合<br>¥10,000コース / ¥13,000コース<br>料理コース半額（税サ別）+ ドリンク代はご負担</small></div>
+        </div>
+      </div>
+      <div class="bubble-time">3月14日</div>
+    </div>
+
+    <div class="date-divider"><span>5月27日ごろ（1ヶ月前）</span></div>
+    <div class="chat-bubble us">
+      <div class="bubble-label">おふたり締切</div>
+      <div class="bubble-body" style="text-align:left">
+        <div class="schedule-item">
+          <span class="schedule-icon">🎁</span>
+          <div class="schedule-text">くじ抽選会 景品確定（RWEDDINGS手配の場合）</div>
+        </div>
+        <div class="schedule-item">
+          <span class="schedule-icon">🎵</span>
+          <div class="schedule-text">エンドロール音源確定</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="date-divider"><span>6月27日（土）🎊 本番！</span></div>
+    <div class="chat-bubble planner">
+      <div class="bubble-label">🌸 当日スケジュール</div>
+      <div class="bubble-body">
+        <div class="schedule-item"><span class="schedule-icon">💄</span><div class="schedule-text"><span class="schedule-date">13:00〜</span> 支度開始</div></div>
+        <div class="schedule-item"><span class="schedule-icon">⛪</span><div class="schedule-text"><span class="schedule-date">18:00〜</span> 挙式（ソイル チャペル）</div></div>
+        <div class="schedule-item"><span class="schedule-icon">🥂</span><div class="schedule-text"><span class="schedule-date">18:55〜</span> 披露宴スタート</div></div>
+        <div class="schedule-item"><span class="schedule-icon">🌙</span><div class="schedule-text"><span class="schedule-date">20:45</span> お開き</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 進捗タブ -->
+  <div id="tab-progress" class="tab-content">
+    <div class="progress-card">
+      <div class="progress-title">全体の進捗</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="total-bar" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="total-label">0 / 0 完了</div>
+    </div>
+    <div class="progress-card">
+      <div class="progress-title">🔴 3月中のタスク</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="urgent-bar" style="width:0%; background: linear-gradient(90deg,#f44336,#e53935)"></div>
+      </div>
+      <div class="progress-label" id="urgent-label">0 / 0 完了</div>
+    </div>
+    <div class="progress-card">
+      <div class="progress-title">🟡 1ヶ月前タスク</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="soon-bar" style="width:0%; background: linear-gradient(90deg,#ff9800,#f57c00)"></div>
+      </div>
+      <div class="progress-label" id="soon-label">0 / 0 完了</div>
+    </div>
+    <div class="progress-card">
+      <div class="progress-title">📅 次のスケジュール</div>
+      <div id="next-schedule" style="font-size:14px; color: var(--text); line-height:1.8;"></div>
+    </div>
+    <div class="progress-card">
+      <div class="progress-title">💌 プランナーからのメモ</div>
+      <div style="font-size:13px; color:#666; line-height:1.8;">
+        ・前撮り用ブーケ造花写真・六華苑の事例写真は後日送付予定<br>
+        ・カメラマン指名リストも後日送付予定<br>
+        ・ISUM申請曲サイト: <a href="https://isum.or.jp/music/" target="_blank" style="color:var(--pink-dark)">isum.or.jp/music/</a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<button class="fab" onclick="openModal()" title="タスクを追加">＋</button>
+
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <h2>📝 タスクを追加</h2>
+    <input type="text" id="new-task-title" placeholder="タスク名" maxlength="50">
+    <textarea id="new-task-desc" placeholder="メモ（任意）"></textarea>
+    <select id="new-task-priority">
+      <option value="urgent">🔴 3月中に完了</option>
+      <option value="soon">🟡 1ヶ月前まで</option>
+      <option value="ongoing">🟢 随時</option>
+    </select>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="addCustomTask()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== パスワード ======
+const PASSWORD = '0627'; // 結婚式の日付
+
+function checkPassword() {
+  const input = document.getElementById('pw-input');
+  const err = document.getElementById('pw-error');
+  if (input.value === PASSWORD) {
+    sessionStorage.setItem('wedding-auth', '1');
+    document.getElementById('lock-screen').classList.add('hidden');
+    initApp();
+  } else {
+    err.textContent = 'パスワードが違います';
+    input.value = '';
+    input.focus();
+    setTimeout(() => err.textContent = '', 2000);
+  }
+}
+
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPassword();
+});
+
+// セッション中は再入力不要
+if (sessionStorage.getItem('wedding-auth') === '1') {
+  document.getElementById('lock-screen').classList.add('hidden');
+  initApp();
+}
+
+// ====== Firebase 設定 ======
+const firebaseConfig = {
+  apiKey: "AIzaSyAi6A2XZtMqOp8I38MIjh64jg-xNUF_LTQ",
+  authDomain: "wedding-aoki-2026.firebaseapp.com",
+  databaseURL: "https://wedding-aoki-2026-default-rtdb.firebaseio.com",
+  projectId: "wedding-aoki-2026",
+  storageBucket: "wedding-aoki-2026.firebasestorage.app",
+  messagingSenderId: "819042890840",
+  appId: "1:819042890840:web:61a9e4a61ae0e777f1c62d"
+};
+
+// ====== デフォルトタスク ======
+const DEFAULT_TASKS = [
+  { id: 'task-1', title: '引出物の決定', desc: '「引出物セッティング指示書」に入力してLINEで提出', priority: 'urgent', done: false, custom: false },
+  { id: 'task-2', title: '席次表 最新版の共有', desc: '最新の席次表をプランナーへ共有', priority: 'urgent', done: false, custom: false },
+  { id: 'task-3', title: '列席支度申込書の提出', desc: 'Excelファイルに入力してLINEで寺島さんへ送付', priority: 'urgent', done: false, custom: false },
+  { id: 'task-4', title: 'くじ抽選会の景品決定', desc: 'RWEDDINGSで手配する場合は1ヶ月前（5月27日頃）まで', priority: 'soon', done: false, custom: false },
+  { id: 'task-5', title: 'エンドロール音源の決定', desc: '1ヶ月前まで。ISUM申請曲サイトで確認: isum.or.jp/music/', priority: 'soon', done: false, custom: false },
+  { id: 'task-6', title: 'ペーパーアイテム類の検討', desc: '席次表・メニュー表・席札のデザイン・印刷方法を検討', priority: 'ongoing', done: false, custom: false }
+];
+
+let tasks = [];
+let db = null;
+let dbRef = null;
+
+function initApp() {
+  setLoadingBar(30);
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    dbRef = db.ref('tasks');
+
+    setSyncDot('syncing');
+    setLoadingBar(60);
+
+    // Firebaseからリアルタイムで読み込み
+    dbRef.on('value', snapshot => {
+      setLoadingBar(100);
+      setSyncDot('online');
+      const data = snapshot.val();
+
+      if (data && data.items) {
+        // Firebaseにデータあり → マージ
+        const doneMap = {};
+        data.items.forEach(t => { if (t) doneMap[t.id] = t.done; });
+        const customs = data.items.filter(t => t && t.custom);
+        tasks = [
+          ...DEFAULT_TASKS.map(t => ({ ...t, done: doneMap[t.id] !== undefined ? doneMap[t.id] : t.done })),
+          ...customs
+        ];
+      } else {
+        // 初回 → デフォルトをFirebaseに保存
+        tasks = [...DEFAULT_TASKS];
+        saveToFirebase();
+      }
+
+      renderTasks();
+      setTimeout(() => setLoadingBar(0), 500);
+    });
+
+    db.ref('.info/connected').on('value', snap => {
+      setSyncDot(snap.val() ? 'online' : 'syncing');
+    });
+
+  } catch (e) {
+    console.error('Firebase error:', e);
+    // フォールバック: ローカルストレージ
+    const saved = localStorage.getItem('wedding-tasks-v2');
+    if (saved) {
+      const data = JSON.parse(saved);
+      const doneMap = {};
+      data.forEach(t => { doneMap[t.id] = t.done; });
+      const customs = data.filter(t => t.custom);
+      tasks = [...DEFAULT_TASKS.map(t => ({...t, done: doneMap[t.id] !== undefined ? doneMap[t.id] : t.done})), ...customs];
+    } else {
+      tasks = [...DEFAULT_TASKS];
+    }
+    renderTasks();
+    setLoadingBar(0);
+  }
+
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+}
+
+function saveToFirebase() {
+  if (dbRef) {
+    setSyncDot('syncing');
+    dbRef.set({ items: tasks, updatedAt: Date.now() })
+      .then(() => setSyncDot('online'))
+      .catch(e => {
+        console.error(e);
+        localStorage.setItem('wedding-tasks-v2', JSON.stringify(tasks));
+      });
+  } else {
+    localStorage.setItem('wedding-tasks-v2', JSON.stringify(tasks));
+  }
+}
+
+// ====== UI ======
+function setLoadingBar(pct) {
+  document.getElementById('loading-bar').style.width = pct + '%';
+}
+
+function setSyncDot(state) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot ' + state;
+}
+
+function updateCountdown() {
+  const weddingDate = new Date('2026-06-27T13:00:00');
+  const diff = weddingDate - new Date();
+  if (diff <= 0) {
+    document.getElementById('countdown').textContent = '🎉 結婚おめでとう！';
+    return;
+  }
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  document.getElementById('countdown').textContent = `本番まで あと ${days} 日`;
+}
+
+function createTaskCard(task) {
+  const card = document.createElement('div');
+  card.className = `task-card ${task.priority} ${task.done ? 'done' : ''}`;
+  card.dataset.id = task.id;
+
+  const deadlineLabels = {
+    urgent: { text: '3月31日まで', cls: 'deadline-urgent' },
+    soon:   { text: '5月27日まで', cls: 'deadline-soon' },
+    ongoing: { text: '随時', cls: 'deadline-ok' }
+  };
+  const dl = deadlineLabels[task.priority] || deadlineLabels.ongoing;
+
+  card.innerHTML = `
+    <div class="check-circle"></div>
+    <div class="task-content">
+      <div class="task-title">${task.title}</div>
+      ${task.desc ? `<div class="task-desc">${task.desc}</div>` : ''}
+      <div class="task-meta">
+        <span class="tag ${dl.cls}">📅 ${dl.text}</span>
+        ${task.custom ? '<span class="tag type">✏️ 自分で追加</span>' : '<span class="tag type">📋 プランナー</span>'}
+      </div>
+    </div>
+  `;
+  card.addEventListener('click', () => toggleTask(task.id));
+  return card;
+}
+
+function renderTasks() {
+  const containers = {
+    urgent: document.getElementById('urgent-tasks'),
+    soon: document.getElementById('soon-tasks'),
+    ongoing: document.getElementById('ongoing-tasks'),
+    custom: document.getElementById('custom-tasks')
+  };
+  Object.values(containers).forEach(c => c.innerHTML = '');
+  const counts = { urgent: 0, soon: 0, ongoing: 0, custom: 0 };
+
+  tasks.forEach(task => {
+    const card = createTaskCard(task);
+    if (task.custom) { containers.custom.appendChild(card); counts.custom++; }
+    else { containers[task.priority]?.appendChild(card); counts[task.priority]++; }
+  });
+
+  document.getElementById('urgent-count').textContent = tasks.filter(t => t.priority==='urgent' && !t.done && !t.custom).length;
+  document.getElementById('soon-count').textContent = tasks.filter(t => t.priority==='soon' && !t.done && !t.custom).length;
+  document.getElementById('ongoing-count').textContent = tasks.filter(t => t.priority==='ongoing' && !t.done && !t.custom).length;
+  document.getElementById('custom-count').textContent = tasks.filter(t => t.custom && !t.done).length;
+  document.getElementById('custom-section').style.display = counts.custom > 0 ? 'block' : 'none';
+
+  updateProgress();
+}
+
+function toggleTask(id) {
+  tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+  saveToFirebase();
+  renderTasks();
+}
+
+function updateProgress() {
+  const all = tasks.length;
+  const done = tasks.filter(t => t.done).length;
+  const urgentAll = tasks.filter(t => t.priority==='urgent' && !t.custom).length;
+  const urgentDone = tasks.filter(t => t.priority==='urgent' && t.done && !t.custom).length;
+  const soonAll = tasks.filter(t => t.priority==='soon' && !t.custom).length;
+  const soonDone = tasks.filter(t => t.priority==='soon' && t.done && !t.custom).length;
+
+  const pct = all > 0 ? Math.round(done/all*100) : 0;
+  document.getElementById('total-bar').style.width = pct + '%';
+  document.getElementById('total-label').textContent = `${done} / ${all} 完了 (${pct}%)`;
+
+  const uPct = urgentAll > 0 ? Math.round(urgentDone/urgentAll*100) : 0;
+  document.getElementById('urgent-bar').style.width = uPct + '%';
+  document.getElementById('urgent-label').textContent = `${urgentDone} / ${urgentAll} 完了`;
+
+  const sPct = soonAll > 0 ? Math.round(soonDone/soonAll*100) : 0;
+  document.getElementById('soon-bar').style.width = sPct + '%';
+  document.getElementById('soon-label').textContent = `${soonDone} / ${soonAll} 完了`;
+
+  const today = new Date();
+  const schedules = [
+    { date: new Date('2026-03-29'), label: '3月29日（日）', detail: '💐 10:00〜 お花打合せ<br>📸 12:30〜 カメラ打合せ @ RWEDDINGSサロン' },
+    { date: new Date('2026-04-04'), label: '4月4日（日）', detail: '🍽️ 17:30〜 ご試食 @ レシピ現地' },
+    { date: new Date('2026-06-27'), label: '6月27日（土）🎊', detail: '💍 結婚式 本番！' }
+  ];
+  const next = schedules.find(s => s.date >= today);
+  if (next) {
+    const diffDays = Math.ceil((next.date - today) / (1000*60*60*24));
+    document.getElementById('next-schedule').innerHTML = `<strong>${next.label}</strong>（あと${diffDays}日）<br>${next.detail}`;
+  }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['tasks','schedule','progress'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === 'tab-' + name);
+  });
+}
+
+function openModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target === document.getElementById('modal')) closeModal(); }
+
+function addCustomTask() {
+  const title = document.getElementById('new-task-title').value.trim();
+  if (!title) { alert('タスク名を入力してください'); return; }
+  const task = {
+    id: 'custom-' + Date.now(),
+    title,
+    desc: document.getElementById('new-task-desc').value.trim(),
+    priority: document.getElementById('new-task-priority').value,
+    done: false,
+    custom: true
+  };
+  tasks.push(task);
+  saveToFirebase();
+  renderTasks();
+  closeModal();
+  document.getElementById('new-task-title').value = '';
+  document.getElementById('new-task-desc').value = '';
+  switchTab('tasks');
+}
+</script>
+</body>
+</html>
